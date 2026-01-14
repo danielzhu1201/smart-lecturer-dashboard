@@ -15,8 +15,11 @@ export function DashboardView({ youtubeUrl }: DashboardViewProps) {
   const playerRef = useRef<any>(null);
 
   const handleSeek = (seconds: number) => {
-    if (playerRef.current && typeof playerRef.current.seekTo === "function") {
+    if (playerRef.current.seekTo) {
       playerRef.current.seekTo(seconds, "seconds");
+    } else {
+      // Fallback to native property
+      playerRef.current.currentTime = seconds;
     }
   };
 
@@ -32,12 +35,6 @@ export function DashboardView({ youtubeUrl }: DashboardViewProps) {
               width="100%"
               height="100%"
               controls
-              config={{
-                youtube: {
-                  rel: 0,
-                  fs: 1,
-                },
-              }}
             />
           </div>
           <StudyTools />
