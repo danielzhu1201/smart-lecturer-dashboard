@@ -11,11 +11,13 @@ interface DashboardViewProps {
 }
 
 export function DashboardView({ youtubeUrl }: DashboardViewProps) {
-  const playerRef = useRef<ReactPlayer | null>(null);
+  // Use `any` to avoid TypeScript issues with ReactPlayer refs; see react-player docs for details.
+  const playerRef = useRef<any>(null);
 
   const handleSeek = (seconds: number) => {
-    // @ts-ignore: ReactPlayer type doesn't always include seekTo on ref, but method exists
-    playerRef.current?.seekTo(seconds, "seconds");
+    if (playerRef.current && typeof playerRef.current.seekTo === "function") {
+      playerRef.current.seekTo(seconds, "seconds");
+    }
   };
 
   return (
@@ -26,13 +28,14 @@ export function DashboardView({ youtubeUrl }: DashboardViewProps) {
           <div className="aspect-video bg-muted rounded-lg overflow-hidden">
             <ReactPlayer
               ref={playerRef}
-              url={youtubeUrl}
+              src={youtubeUrl}
               width="100%"
               height="100%"
               controls
               config={{
                 youtube: {
-                  playerVars: { showinfo: 1 },
+                  rel: 0,
+                  fs: 1,
                 },
               }}
             />
