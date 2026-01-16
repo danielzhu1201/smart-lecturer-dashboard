@@ -6,11 +6,14 @@ import { LectureNavigator } from "@/components/lecture-navigator";
 import { ProfessorChat } from "@/components/professor-chat";
 import { StudyTools } from "@/components/study-tools";
 
+import { BlueprintSection } from "@/types/lecture-navigator";
+
 interface DashboardViewProps {
   youtubeUrl: string;
+  sections?: BlueprintSection[]; // new prop
 }
 
-export function DashboardView({ youtubeUrl }: DashboardViewProps) {
+export function DashboardView({ youtubeUrl, sections }: DashboardViewProps) {
   // Use `any` to avoid TypeScript issues with ReactPlayer refs; see react-player docs for details.
   const playerRef = useRef<any>(null);
 
@@ -42,7 +45,7 @@ export function DashboardView({ youtubeUrl }: DashboardViewProps) {
 
         {/* Right Sidebar - Navigator and Chat */}
         <div className="lg:col-span-1 space-y-6">
-          <LectureNavigator onSeek={handleSeek} />
+          <LectureNavigator onSeek={handleSeek} sections={sections} />
           <ProfessorChat onSeek={handleSeek} />
         </div>
       </div>
