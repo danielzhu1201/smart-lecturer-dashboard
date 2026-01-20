@@ -109,9 +109,6 @@ export async function POST(req: NextRequest) {
     console.log("[process-video] Sending prompt to Gemini: ", prompt);
 
     const geminiClient = getGenAIClient();
-    const model = geminiClient.getGenerativeModel({
-      model: "gemini-2.5-flash",
-    });
 
     // Define the video as a part of the content
     const videoPart = {
@@ -124,8 +121,11 @@ export async function POST(req: NextRequest) {
     console.log("[process-video] Sending video part to Gemini: ", videoPart);
 
     // Send both parts to the model
-    const result = await model.generateContent([videoPart, prompt]);
-    const llmResponse = await result.response.text();
+    const result = await geminiClient.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [videoPart, prompt],
+    });
+    const llmResponse = (await result.text) || "";
 
     console.log("[process-video] LLM Response:", llmResponse);
 
