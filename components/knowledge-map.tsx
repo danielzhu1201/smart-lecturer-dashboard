@@ -1,11 +1,27 @@
-"use client"
-import ReactFlow, { MiniMap, Controls, Background, useNodesState, useEdgesState, BackgroundVariant } from "reactflow"
-import "reactflow/dist/style.css"
-import { mockKnowledgeGraph } from "@/lib/mock-data"
+"use client";
+import ReactFlow, {
+  MiniMap,
+  Controls,
+  Background,
+  useNodesState,
+  useEdgesState,
+  BackgroundVariant,
+  Node,
+  Edge,
+} from "reactflow";
+import "reactflow/dist/style.css";
 
-export function KnowledgeMap() {
-  const [nodes, , onNodesChange] = useNodesState(mockKnowledgeGraph.nodes)
-  const [edges, , onEdgesChange] = useEdgesState(mockKnowledgeGraph.edges)
+type KnowledgeMapProps = {
+  nodes: Node[];
+  edges: Edge[];
+};
+
+export function KnowledgeMap({
+  nodes: initNodes,
+  edges: initEdges,
+}: KnowledgeMapProps) {
+  const [nodes, , onNodesChange] = useNodesState(initNodes);
+  const [edges, , onEdgesChange] = useEdgesState(initEdges);
 
   return (
     <div className="h-[500px] w-full border rounded-lg overflow-hidden bg-background">
@@ -22,5 +38,5 @@ export function KnowledgeMap() {
         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
       </ReactFlow>
     </div>
-  )
+  );
 }
