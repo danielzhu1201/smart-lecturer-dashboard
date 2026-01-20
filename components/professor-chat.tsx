@@ -1,6 +1,7 @@
 "use client";
 
 import type React from "react";
+import { useChat } from "@ai-sdk/react";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,25 +12,22 @@ interface ProfessorChatProps {
   onSeek?: (seconds: number) => void;
 }
 
-interface Message {
-  id: string;
-  text: string;
-}
-
 export function ProfessorChat({ onSeek }: ProfessorChatProps) {
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<Message[]>([]);
+  const { messages, sendMessage } = useChat();
 
-  // Handle message send (user only, no backend/api call)
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
-    setMessages((prev) => [
-      ...prev,
-      { id: `${Date.now()}-${Math.random()}`, text: input.trim() },
-    ]);
-    setInput("");
-    // TODO: Integrate Gemini chat here in the future. Call Gemini API and append assistant messages.
+
+    try {
+      await sendMessage({ text: input });
+      setInput("");
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      // TODO: Show user-friendly error message
+      // You could add a toast notification here
+    }
   };
 
   return (
@@ -48,15 +46,32 @@ export function ProfessorChat({ onSeek }: ProfessorChatProps) {
             </div>
           )}
 
-          {messages.map((message) => (
-            <div key={message.id} className="flex justify-end">
-              <div className="max-w-[85%] rounded-lg px-4 py-2 bg-primary text-primary-foreground">
-                <div className="text-sm whitespace-pre-wrap">
-                  {message.text}
+          {messages.map((message) => {
+            const isUser = message.role === "user";
+
+            return (
+              <div
+                key={message.id}
+                className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`max-w-[85%] rounded-lg px-4 py-2 ${
+                    isUser
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-foreground"
+                  }`}
+                >
+                  <div className="text-sm whitespace-pre-wrap">
+                    {message.parts?.map((part, i) =>
+                      part.type === "text" ? (
+                        <span key={`${message.id}-${i}`}>{part.text}</span>
+                      ) : null,
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <form onSubmit={handleSubmit} className="flex gap-2">
