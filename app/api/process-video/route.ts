@@ -26,7 +26,9 @@ type Blueprint = { sections: BlueprintSection[] };
  * Basic runtime check for sections/subsections/timestamp structure & MM:SS format
  */
 function isValidBlueprint(obj: any): obj is Blueprint {
-  //TODO: fix the scenario where a video is 1+ hours long
+  // Accept either MM:SS (e.g., 03:14) or HH:MM:SS (e.g., 01:03:14)
+  const timestampRe = /^(?:\d{1,2}:\d{2}|\d{2}:\d{2}:\d{2})$/;
+
   if (!obj || typeof obj !== "object" || !Array.isArray(obj.sections)) {
     return false;
   }
@@ -40,7 +42,7 @@ function isValidBlueprint(obj: any): obj is Blueprint {
       if (
         typeof sub.title !== "string" ||
         typeof sub.timestamp !== "string" ||
-        !/^(\d{1,2}:\d{2}|\d{2}:\d{2}:\d{2})$/.test(sub.timestamp)
+        !timestampRe.test(sub.timestamp)
       ) {
         return false;
       }
@@ -55,7 +57,7 @@ function isValidBlueprint(obj: any): obj is Blueprint {
 function makeLLMPrompt(youtubeUrl: string) {
   return `
 You are an expert AI assistant that helps students navigate and learn from video lectures.
-Your task is to watch and analyze the YouTube video at the URL provided below.
+Your task is to watch and analyze the YouTube video at the URL provided below and produce a structured lecture “navigator”.
 
 Here is the YouTube video to analyze(uploaded as a file already):
 ${youtubeUrl}
@@ -79,6 +81,9 @@ Strict Instructions:
 - Each section must have a "title" string.
 - Each subsection must have BOTH a "title" and a "timestamp" string field.
 - All timestamps must be in "HH:MM:SS" (hours:minutes:seconds, zero-padded) and represent the starting point of the subsection in the video.
+- Each section MUST have between 3 and 5 subsections. NEVER output more than 5 subsections in a section.
+- If a section would naturally have more than 5 topics, MERGE adjacent small/related topics into broader subsections so it stays within the 5-subsection limit.
+- Subsection titles should be short (3–8 words), concrete, and reflect what’s happening at that moment (concept, derivation, example, or recap).
 - If exact timestamp is uncertain, make your most reasonable guess based on video flow.
 - Do not include any non-JSON text, explanations, markdown, or notes.
 `;
@@ -111,10 +116,12 @@ export async function POST(req: NextRequest) {
     // Define the video as a part of the content
     const videoPart = {
       fileData: {
-        fileUri: "https://www.youtube.com/watch?v=ZmNpeXTj2c4",
+        fileUri: youtubeUrl,
         mimeType: "video/mp4", // Use video/mp4 for YouTube URLs in the API
       },
     };
+
+    console.log("[process-video] Sending video part to Gemini: ", videoPart);
 
     // Send both parts to the model
     const result = await model.generateContent([videoPart, prompt]);
