@@ -9,3 +9,8 @@ export type BlueprintSection = {
 export type Blueprint = {
   sections: BlueprintSection[];
 };
+
+export type Flashcard = {
+  question: string;
+  answer: string;
+};

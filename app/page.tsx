@@ -5,7 +5,7 @@ import { Header } from "@/components/header";
 import { DashboardView } from "@/components/dashboard-view";
 import { LoadingState } from "@/components/loading-state";
 
-import { Blueprint } from "@/types/lecture-navigator";
+import { Blueprint, Flashcard } from "@/types/lecture-navigator";
 
 export default function Home() {
   const [appState, setAppState] = useState<"initial" | "loading" | "active">(
@@ -13,12 +13,14 @@ export default function Home() {
   );
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [blueprint, setBlueprint] = useState<Blueprint | null>(null);
+  const [flashcards, setFlashcards] = useState<Flashcard[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleProcessVideo = async (url: string) => {
     setYoutubeUrl(url);
     setAppState("loading");
     setBlueprint(null);
+    setFlashcards(null);
     setError(null);
     try {
       const res = await fetch("/api/process-video", {
@@ -29,6 +31,7 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Processing failed");
       setBlueprint(data.blueprint);
+      setFlashcards(data.flashcards);
       setAppState("active");
     } catch (e: any) {
       setError(e.message);
@@ -68,6 +71,7 @@ export default function Home() {
           <DashboardView
             youtubeUrl={youtubeUrl}
             sections={blueprint.sections}
+            flashcards={flashcards}
           />
         )}
       </main>

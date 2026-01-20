@@ -6,14 +6,19 @@ import { LectureNavigator } from "@/components/lecture-navigator";
 import { ProfessorChat } from "@/components/professor-chat";
 import { StudyTools } from "@/components/study-tools";
 import { createKnowledgeMapGraph } from "@/lib/utils";
-import { BlueprintSection } from "@/types/lecture-navigator";
+import { BlueprintSection, Flashcard } from "@/types/lecture-navigator";
 
 interface DashboardViewProps {
   youtubeUrl: string;
   sections?: BlueprintSection[]; // new prop
+  flashcards?: Flashcard[] | null;
 }
 
-export function DashboardView({ youtubeUrl, sections }: DashboardViewProps) {
+export function DashboardView({
+  youtubeUrl,
+  sections,
+  flashcards,
+}: DashboardViewProps) {
   // Use `any` to avoid TypeScript issues with ReactPlayer refs; see react-player docs for details.
   const playerRef = useRef<any>(null);
 
@@ -49,7 +54,10 @@ export function DashboardView({ youtubeUrl, sections }: DashboardViewProps) {
               controls
             />
           </div>
-          <StudyTools knowledgeMapData={knowledgeMapData} />
+          <StudyTools
+            knowledgeMapData={knowledgeMapData}
+            flashcards={flashcards ?? null}
+          />
         </div>
 
         {/* Right Sidebar - Navigator, Knowledge Map, and Chat */}

@@ -8,6 +8,7 @@ import { StudySnaps } from "@/components/study-snaps";
 import { KnowledgeMap } from "@/components/knowledge-map";
 
 import type { FC } from "react";
+import type { Flashcard } from "@/types/lecture-navigator";
 
 interface KnowledgeMapData {
   nodes: any[];
@@ -16,9 +17,13 @@ interface KnowledgeMapData {
 
 interface StudyToolsProps {
   knowledgeMapData: KnowledgeMapData | null;
+  flashcards?: Flashcard[] | null;
 }
 
-export const StudyTools: FC<StudyToolsProps> = ({ knowledgeMapData }) => {
+export const StudyTools: FC<StudyToolsProps> = ({
+  knowledgeMapData,
+  flashcards,
+}) => {
   const [showFlashcards, setShowFlashcards] = useState(false);
   const [showKnowledgeMap, setShowKnowledgeMap] = useState(false);
 
@@ -52,7 +57,7 @@ export const StudyTools: FC<StudyToolsProps> = ({ knowledgeMapData }) => {
         {showFlashcards && (
           <div>
             <h3 className="text-sm font-semibold mb-4">Study Snaps</h3>
-            <StudySnaps />
+            <StudySnaps flashcards={flashcards ?? []} />
           </div>
         )}
 

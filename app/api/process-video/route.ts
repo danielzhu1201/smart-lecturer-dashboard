@@ -21,6 +21,16 @@ type BlueprintSection = {
 };
 type Blueprint = { sections: BlueprintSection[] };
 
+type Flashcard = {
+  question: string;
+  answer: string;
+};
+
+type ProcessVideoPayload = {
+  blueprint: Blueprint;
+  flashcards: Flashcard[];
+};
+
 /**
 /**
  * Basic runtime check for sections/subsections/timestamp structure & MM:SS format
@@ -51,13 +61,27 @@ function isValidBlueprint(obj: any): obj is Blueprint {
   return true;
 }
 
+function isValidFlashcards(obj: any): obj is Flashcard[] {
+  if (!Array.isArray(obj) || obj.length !== 20) return false;
+  for (const card of obj) {
+    if (!card || typeof card !== "object") return false;
+    if (typeof card.question !== "string" || card.question.trim().length === 0)
+      return false;
+    if (typeof card.answer !== "string" || card.answer.trim().length === 0)
+      return false;
+  }
+  return true;
+}
+
 /**
  * Generates an LLM prompt for structured video summary.
  */
 function makeLLMPrompt(youtubeUrl: string) {
   return `
 You are an expert AI assistant that helps students navigate and learn from video lectures.
-Your task is to watch and analyze the YouTube video at the URL provided below and produce a structured lecture “navigator”.
+Your task is to watch and analyze the YouTube video at the URL provided below and produce:
+1) a structured lecture “navigator” (blueprint)
+2) 20 Quizlet-style flashcards (question/answer)
 
 Here is the YouTube video to analyze(uploaded as a file already):
 ${youtubeUrl}
@@ -65,25 +89,43 @@ ${youtubeUrl}
 Your output MUST be a single valid JSON object with the following format (NO markdown, no explanations):
 
 {
-  "sections": [
-    {
-      "title": "Section Example",
-      "subsections": [
-        { "title": "Subsection Example 1", "timestamp": "00:00" },
-        { "title": "Subsection Example 2", "timestamp": "03:14" }
-      ]
-    }
+  "blueprint": {
+    "sections": [
+      {
+        "title": "Section Example",
+        "subsections": [
+          { "title": "Subsection Example 1", "timestamp": "00:00:00" },
+          { "title": "Subsection Example 2", "timestamp": "00:03:14" }
+        ]
+      }
+    ]
+  },
+  "flashcards": [
+    { "question": "Question 1", "answer": "Answer 1" }
   ]
 }
 
 Strict Instructions:
 - Output ONLY valid, parsable JSON in the above shape (no markdown formatting, no comments, no extra text).
+- The top-level object MUST have exactly two keys: "blueprint" and "flashcards".
+
+Blueprint rules:
+- The "blueprint" value MUST match this schema:
+  { "sections": [ { "title": string, "subsections": [ { "title": string, "timestamp": string } ] } ] }
 - Each section must have a "title" string.
 - Each subsection must have BOTH a "title" and a "timestamp" string field.
 - All timestamps must be in "HH:MM:SS" (hours:minutes:seconds, zero-padded) and represent the starting point of the subsection in the video.
 - Each section MUST have between 3 and 5 subsections. NEVER output more than 5 subsections in a section.
 - If a section would naturally have more than 5 topics, MERGE adjacent small/related topics into broader subsections so it stays within the 5-subsection limit.
 - Subsection titles should be short (3–8 words), concrete, and reflect what’s happening at that moment (concept, derivation, example, or recap).
+
+Flashcard rules:
+- "flashcards" MUST be an array of exactly 20 items.
+- Each item must be: { "question": string, "answer": string }
+- Questions should be short and test understanding of the lecture.
+- Answers should be concise (prefer 1–3 sentences). Use plain text only.
+- Do not reference timestamps in flashcards.
+
 - If exact timestamp is uncertain, make your most reasonable guess based on video flow.
 - Do not include any non-JSON text, explanations, markdown, or notes.
 `;
@@ -130,17 +172,28 @@ export async function POST(req: NextRequest) {
     console.log("[process-video] LLM Response:", llmResponse);
 
     // Try to parse and validate the JSON response
-    let blueprint: unknown = null;
+    let payload: unknown = null;
     try {
       // If Gemini adds markdown code block, remove it
       const cleaned = llmResponse.replace(/^[`\s]*json\s*|[`]+$/gim, "").trim();
-      blueprint = JSON.parse(cleaned);
+      payload = JSON.parse(cleaned);
     } catch (jsonErr) {
       return NextResponse.json(
         { error: "Gemini response was not valid JSON", details: llmResponse },
         { status: 422 }
       );
     }
+
+    if (!payload || typeof payload !== "object") {
+      return NextResponse.json(
+        { error: "Gemini response was not a JSON object", details: payload },
+        { status: 422 }
+      );
+    }
+
+    const maybePayload = payload as any;
+    const blueprint = maybePayload.blueprint;
+    const flashcards = maybePayload.flashcards;
 
     if (!isValidBlueprint(blueprint)) {
       return NextResponse.json(
@@ -152,7 +205,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ blueprint });
+    if (!isValidFlashcards(flashcards)) {
+      return NextResponse.json(
+        {
+          error: "LLM response did not match expected flashcards schema",
+          details: flashcards,
+        },
+        { status: 422 }
+      );
+    }
+
+    const response: ProcessVideoPayload = { blueprint, flashcards };
+    return NextResponse.json(response);
   } catch (err: any) {
     console.error("[process-video]", err);
     return NextResponse.json(
