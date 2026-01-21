@@ -16,19 +16,41 @@ interface ProfessorChatProps {
 
 export function ProfessorChat({ onSeek, blueprint }: ProfessorChatProps) {
   const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const { messages, sendMessage } = useChat();
   const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  const lastMessage = messages[messages.length - 1];
+  const lastTextLength =
+    lastMessage?.parts
+      ?.filter((p) => p.type === "text")
+      .map((p: any) => p.text)
+      .join("")?.length ?? 0;
+  const scrollKey = `${lastMessage?.id ?? "none"}:${lastTextLength}:${isLoading}`;
 
   // Keep the latest message visible as the conversation grows.
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages.length]);
+  }, [scrollKey]);
+
+  const TypingIndicator = () => (
+    <div className="flex justify-start">
+      <div className="max-w-[85%] rounded-lg px-4 py-2 bg-muted text-foreground">
+        <div className="flex items-center gap-1 h-5">
+          <span className="w-2 h-2 rounded-full bg-foreground/40 animate-bounce [animation-delay:-0.2s]" />
+          <span className="w-2 h-2 rounded-full bg-foreground/40 animate-bounce [animation-delay:-0.1s]" />
+          <span className="w-2 h-2 rounded-full bg-foreground/40 animate-bounce" />
+        </div>
+      </div>
+    </div>
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
 
     try {
+      setIsLoading(true);
       await sendMessage(
         { text: input },
         {
@@ -42,6 +64,8 @@ export function ProfessorChat({ onSeek, blueprint }: ProfessorChatProps) {
       console.error("Failed to send message:", error);
       // TODO: Show user-friendly error message
       // You could add a toast notification here
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -87,6 +111,8 @@ export function ProfessorChat({ onSeek, blueprint }: ProfessorChatProps) {
               </div>
             );
           })}
+
+          {isLoading && <TypingIndicator />}
           <div ref={bottomRef} />
         </div>
 
