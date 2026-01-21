@@ -10,17 +10,21 @@ import {
 import { Button } from "@/components/ui/button";
 import { BookOpen, Clock } from "lucide-react";
 import { mockBlueprint } from "@/lib/mock-data";
+import { BlueprintSection } from "@/types/lecture-navigator";
 
 interface LectureNavigatorProps {
   onSeek: (seconds: number) => void;
+  sections?: BlueprintSection[];
 }
 
-export function LectureNavigator({ onSeek }: LectureNavigatorProps) {
+export function LectureNavigator({ onSeek, sections }: LectureNavigatorProps) {
   const handleTimestampClick = (timestamp: string) => {
     const [minutes, seconds] = timestamp.split(":").map(Number);
     const totalSeconds = minutes * 60 + seconds;
     onSeek(totalSeconds);
   };
+
+  const data = sections ?? mockBlueprint.sections;
 
   return (
     <Card className="h-[400px] flex flex-col">
@@ -32,7 +36,7 @@ export function LectureNavigator({ onSeek }: LectureNavigatorProps) {
       </CardHeader>
       <CardContent className="flex-1 overflow-y-auto">
         <Accordion type="single" collapsible className="w-full">
-          {mockBlueprint.sections.map((section, idx) => (
+          {data.map((section, idx) => (
             <AccordionItem key={idx} value={`section-${idx}`}>
               <AccordionTrigger className="text-sm font-semibold">
                 {section.title}
@@ -44,7 +48,7 @@ export function LectureNavigator({ onSeek }: LectureNavigatorProps) {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-auto py-1 px-2 text-xs font-mono text-primary hover:text-primary hover:bg-primary/10"
+                        className="cursor-pointer h-auto py-1 px-2 text-xs font-mono text-primary hover:text-primary hover:bg-primary/10"
                         onClick={() =>
                           handleTimestampClick(subsection.timestamp)
                         }
