@@ -9,7 +9,7 @@ import { Blueprint, Flashcard } from "@/types/lecture-navigator";
 
 export default function Home() {
   const [appState, setAppState] = useState<"initial" | "loading" | "active">(
-    "initial"
+    "initial",
   );
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [blueprint, setBlueprint] = useState<Blueprint | null>(null);
