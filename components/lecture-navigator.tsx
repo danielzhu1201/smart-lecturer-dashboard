@@ -19,8 +19,8 @@ interface LectureNavigatorProps {
 
 export function LectureNavigator({ onSeek, sections }: LectureNavigatorProps) {
   const handleTimestampClick = (timestamp: string) => {
-    const [minutes, seconds] = timestamp.split(":").map(Number);
-    const totalSeconds = minutes * 60 + seconds;
+    const [hours, minutes, seconds] = timestamp.split(":").map(Number);
+    const totalSeconds = hours * 3600 + minutes * 60 + seconds;
     onSeek(totalSeconds);
   };
 

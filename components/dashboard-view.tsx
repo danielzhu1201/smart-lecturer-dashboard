@@ -29,6 +29,12 @@ export function DashboardView({
   const playerRef = useRef<any>(null);
 
   const handleSeek = (seconds: number) => {
+    console.log(
+      "[video] seeking to seconds=",
+      seconds,
+      "seekTo exists=",
+      !!playerRef.current?.seekTo,
+    );
     if (playerRef.current.seekTo) {
       playerRef.current.seekTo(seconds, "seconds");
     } else {

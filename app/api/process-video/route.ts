@@ -21,8 +21,8 @@ type ProcessVideoPayload = {
  * Basic runtime check for sections/subsections/timestamp structure & MM:SS format
  */
 function isValidBlueprint(obj: any): obj is Blueprint {
-  // Accept either MM:SS (e.g., 03:14) or HH:MM:SS (e.g., 01:03:14)
-  const timestampRe = /^(?:\d{1,2}:\d{2}|\d{2}:\d{2}:\d{2})$/;
+  // Enforce HH:MM:SS (e.g., 01:03:14) only
+  const timestampRe = /^\d{2}:\d{2}:\d{2}$/;
 
   if (!obj || typeof obj !== "object" || !Array.isArray(obj.sections)) {
     return false;
@@ -104,7 +104,13 @@ Blueprint rules:
 - Each subsection MUST also include a "summary" string field.
 - Each "summary" must be 3–5 complete sentences (plain text). It should concisely explain the key ideas, definitions, and/or example(s) covered in that subsection.
 - Do not use bullet points in summaries. Do not mention that you are an AI. Do not refer to "the video"; summarize the content directly.
-- All timestamps must be in "HH:MM:SS" (hours:minutes:seconds, zero-padded) and represent the starting point of the subsection in the video.
+- All timestamps MUST be in "HH:MM:SS" (hours:minutes:seconds, zero-padded) and represent the starting point of the subsection in the video.
+- Timestamp formatting MUST be strictly zero-padded to 2 digits per field:
+  - 53 seconds => "00:00:53" (NOT "00:53:00")
+  - 5 minutes 2 seconds => "00:05:02"
+  - 1 hour 3 minutes 14 seconds => "01:03:14"
+- Timestamps must be valid clock values (MM and SS must be 00–59).
+- Timestamps should be monotonically increasing within the lecture timeline.
 - Each section MUST have between 3 and 5 subsections. NEVER output more than 5 subsections in a section.
 - If a section would naturally have more than 5 topics, MERGE adjacent small/related topics into broader subsections so it stays within the 5-subsection limit.
 - Subsection titles should be short (3–8 words), concrete, and reflect what’s happening at that moment (concept, derivation, example, or recap).

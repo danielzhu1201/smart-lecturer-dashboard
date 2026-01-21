@@ -45,6 +45,73 @@ export function ProfessorChat({ onSeek, blueprint }: ProfessorChatProps) {
     </div>
   );
 
+  const parseHHMMSSToSeconds = (timestamp: string) => {
+    const match = timestamp.match(/^(\d{2}):(\d{2}):(\d{2})$/);
+    if (!match) return null;
+    const [, hh, mm, ss] = match;
+    const hours = Number(hh);
+    const minutes = Number(mm);
+    const seconds = Number(ss);
+    if (
+      Number.isNaN(hours) ||
+      Number.isNaN(minutes) ||
+      Number.isNaN(seconds) ||
+      minutes > 59 ||
+      seconds > 59
+    )
+      return null;
+    return hours * 3600 + minutes * 60 + seconds;
+  };
+
+  const renderTextWithClickableTimestamps = (
+    text: string,
+    keyPrefix: string,
+  ) => {
+    // Enforce HH:MM:SS only.
+    const re = /\b\d{2}:\d{2}:\d{2}\b/g;
+    const parts: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = re.exec(text)) !== null) {
+      const ts = match[0];
+      const start = match.index;
+      const end = start + ts.length;
+
+      if (start > lastIndex) {
+        parts.push(text.slice(lastIndex, start));
+      }
+
+      const seconds = parseHHMMSSToSeconds(ts);
+      if (seconds === null || !onSeek) {
+        parts.push(ts);
+      } else {
+        parts.push(
+          <button
+            key={`${keyPrefix}-ts-${start}`}
+            type="button"
+            onClick={() => {
+              console.log("[chat] click timestamp", ts, "=>", seconds);
+              onSeek(seconds);
+            }}
+            className="font-mono text-primary underline underline-offset-2 hover:text-primary/80"
+            aria-label={`Seek to ${ts}`}
+          >
+            {ts}
+          </button>,
+        );
+      }
+
+      lastIndex = end;
+    }
+
+    if (lastIndex < text.length) {
+      parts.push(text.slice(lastIndex));
+    }
+
+    return parts;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
@@ -103,7 +170,12 @@ export function ProfessorChat({ onSeek, blueprint }: ProfessorChatProps) {
                   <div className="text-sm whitespace-pre-wrap">
                     {message.parts?.map((part, i) =>
                       part.type === "text" ? (
-                        <span key={`${message.id}-${i}`}>{part.text}</span>
+                        <span key={`${message.id}-${i}`}>
+                          {renderTextWithClickableTimestamps(
+                            part.text,
+                            `${message.id}-${i}`,
+                          )}
+                        </span>
                       ) : null,
                     )}
                   </div>
