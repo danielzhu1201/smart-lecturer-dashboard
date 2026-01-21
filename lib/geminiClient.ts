@@ -9,7 +9,7 @@ export const getGenAIClient = () => {
   if (!globalForGenAI.genai) {
     console.log("Initializing Singleton Gemini Client...");
     globalForGenAI.genai = new GoogleGenAI({
-      apiKey: process.env.GOOGLE_GENAI_API_KEY!,
+      apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY!,
     });
   }
   return globalForGenAI.genai;

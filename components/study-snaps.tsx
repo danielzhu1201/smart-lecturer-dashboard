@@ -1,30 +1,47 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { mockFlashcards } from "@/lib/mock-data"
+import { useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import type { Flashcard } from "@/types/lecture-navigator";
 
-export function StudySnaps() {
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [isFlipped, setIsFlipped] = useState(false)
+type StudySnapsProps = {
+  flashcards: Flashcard[];
+};
+
+export function StudySnaps({ flashcards }: StudySnapsProps) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isFlipped, setIsFlipped] = useState(false);
+
+  if (!flashcards || flashcards.length === 0) {
+    return (
+      <div className="text-sm text-muted-foreground">
+        No flashcards generated yet.
+      </div>
+    );
+  }
 
   const handleNext = () => {
-    setIsFlipped(false)
-    setCurrentIndex((prev) => (prev + 1) % mockFlashcards.length)
-  }
+    setIsFlipped(false);
+    setCurrentIndex((prev) => (prev + 1) % flashcards.length);
+  };
 
   const handlePrevious = () => {
-    setIsFlipped(false)
-    setCurrentIndex((prev) => (prev - 1 + mockFlashcards.length) % mockFlashcards.length)
-  }
+    setIsFlipped(false);
+    setCurrentIndex(
+      (prev) => (prev - 1 + flashcards.length) % flashcards.length
+    );
+  };
 
-  const currentCard = mockFlashcards[currentIndex]
+  const currentCard = flashcards[currentIndex];
 
   return (
     <div className="space-y-4">
       <div className="relative">
-        <div className="relative w-full h-64 cursor-pointer perspective-1000" onClick={() => setIsFlipped(!isFlipped)}>
+        <div
+          className="relative w-full h-64 cursor-pointer perspective-1000"
+          onClick={() => setIsFlipped(!isFlipped)}
+        >
           <div
             className={`relative w-full h-full transition-transform duration-500 transform-style-3d ${
               isFlipped ? "rotate-y-180" : ""
@@ -40,8 +57,12 @@ export function StudySnaps() {
               style={{ backfaceVisibility: "hidden" }}
             >
               <div className="text-center space-y-4">
-                <div className="text-xs font-semibold text-primary uppercase tracking-wide">Question</div>
-                <p className="text-lg font-medium text-balance">{currentCard.question}</p>
+                <div className="text-xs font-semibold text-primary uppercase tracking-wide">
+                  Question
+                </div>
+                <p className="text-lg font-medium text-balance">
+                  {currentCard.question}
+                </p>
               </div>
             </div>
 
@@ -54,7 +75,9 @@ export function StudySnaps() {
               }}
             >
               <div className="text-center space-y-4">
-                <div className="text-xs font-semibold text-accent uppercase tracking-wide">Answer</div>
+                <div className="text-xs font-semibold text-accent uppercase tracking-wide">
+                  Answer
+                </div>
                 <p className="text-base text-balance">{currentCard.answer}</p>
               </div>
             </div>
@@ -62,21 +85,31 @@ export function StudySnaps() {
         </div>
 
         <p className="text-xs text-center text-muted-foreground mt-4">
-          Click to flip • {currentIndex + 1} / {mockFlashcards.length}
+          Click to flip • {currentIndex + 1} / {flashcards.length}
         </p>
       </div>
 
       <div className="flex justify-between items-center">
-        <Button variant="outline" size="sm" onClick={handlePrevious} disabled={mockFlashcards.length <= 1}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handlePrevious}
+          disabled={flashcards.length <= 1}
+        >
           <ChevronLeft className="h-4 w-4 mr-1" />
           Previous
         </Button>
 
-        <Button variant="outline" size="sm" onClick={handleNext} disabled={mockFlashcards.length <= 1}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleNext}
+          disabled={flashcards.length <= 1}
+        >
           Next
           <ChevronRight className="h-4 w-4 ml-1" />
         </Button>
       </div>
     </div>
-  )
+  );
 }
