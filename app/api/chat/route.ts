@@ -43,12 +43,31 @@ export async function POST(req: Request) {
     blueprint,
   }: { messages: UIMessage[]; blueprint: Blueprint } = await req.json();
 
+  const trimmedUiMessages = messages.length > 4 ? messages.slice(-3) : messages;
+
   const system = blueprintToSystemMessage(blueprint);
-  const modelMessages = await convertToModelMessages(messages);
+  const fullModelMessages = await convertToModelMessages(messages);
+  const modelMessages =
+    trimmedUiMessages === messages
+      ? fullModelMessages
+      : await convertToModelMessages(trimmedUiMessages);
 
   // Debug logging for exactly what we send to the LLM + approximate token counts.
   if (process.env.NODE_ENV !== "production") {
     const systemTokens = approxTokens(system);
+    const fullPerMessage = fullModelMessages.map((m: any, idx: number) => {
+      const content =
+        typeof m.content === "string" ? m.content : JSON.stringify(m.content);
+
+      return {
+        index: idx,
+        role: m.role,
+        approxTokens: approxTokens(content),
+      };
+    });
+    const fullTotalTokens =
+      systemTokens + fullPerMessage.reduce((sum, m) => sum + m.approxTokens, 0);
+
     const perMessage = modelMessages.map((m: any, idx: number) => {
       const content =
         typeof m.content === "string" ? m.content : JSON.stringify(m.content);
@@ -61,6 +80,15 @@ export async function POST(req: Request) {
     });
     const totalTokens =
       systemTokens + perMessage.reduce((sum, m) => sum + m.approxTokens, 0);
+
+    console.log("[chat] uiMessages.count:", messages.length);
+    console.log("[chat] uiMessages.trimmedCount:", trimmedUiMessages.length);
+    console.log("[chat] approxTokens.total.full:", fullTotalTokens);
+    console.log("[chat] approxTokens.total.trimmed:", totalTokens);
+    console.log(
+      "[chat] approxTokens.total.saved:",
+      fullTotalTokens - totalTokens,
+    );
 
     console.log("[chat] LLM payload.system:\n" + stringifyForLog(system));
     console.log(
