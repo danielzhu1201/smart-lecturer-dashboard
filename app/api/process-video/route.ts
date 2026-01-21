@@ -1,23 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getGenAIClient } from "@/lib/geminiClient";
 
-/**
- * --- Lecture Navigator Blueprint Schema ---
- * {
- *   sections: [
- *     {
- *       title: string,
- *       subsections: [
- *         { title: string, timestamp: "MM:SS" }
- *       ]
- *     }
- *   ]
- * }
- */
-
 type BlueprintSection = {
   title: string;
-  subsections: { title: string; timestamp: string }[];
+  subsections: { title: string; timestamp: string; summary: string }[];
 };
 type Blueprint = { sections: BlueprintSection[] };
 
@@ -31,7 +17,6 @@ type ProcessVideoPayload = {
   flashcards: Flashcard[];
 };
 
-/**
 /**
  * Basic runtime check for sections/subsections/timestamp structure & MM:SS format
  */
@@ -52,7 +37,9 @@ function isValidBlueprint(obj: any): obj is Blueprint {
       if (
         typeof sub.title !== "string" ||
         typeof sub.timestamp !== "string" ||
-        !timestampRe.test(sub.timestamp)
+        !timestampRe.test(sub.timestamp) ||
+        typeof sub.summary !== "string" ||
+        sub.summary.trim().length === 0
       ) {
         return false;
       }
@@ -94,8 +81,8 @@ Your output MUST be a single valid JSON object with the following format (NO mar
       {
         "title": "Section Example",
         "subsections": [
-          { "title": "Subsection Example 1", "timestamp": "00:00:00" },
-          { "title": "Subsection Example 2", "timestamp": "00:03:14" }
+          { "title": "Subsection Example 1", "timestamp": "00:00:00", "summary": "3–5 sentences summarizing what is covered in this subsection." },
+          { "title": "Subsection Example 2", "timestamp": "00:03:14", "summary": "3–5 sentences summarizing what is covered in this subsection." }
         ]
       }
     ]
@@ -111,9 +98,12 @@ Strict Instructions:
 
 Blueprint rules:
 - The "blueprint" value MUST match this schema:
-  { "sections": [ { "title": string, "subsections": [ { "title": string, "timestamp": string } ] } ] }
+  { "sections": [ { "title": string, "subsections": [ { "title": string, "timestamp": string, "summary": string } ] } ] }
 - Each section must have a "title" string.
 - Each subsection must have BOTH a "title" and a "timestamp" string field.
+- Each subsection MUST also include a "summary" string field.
+- Each "summary" must be 3–5 complete sentences (plain text). It should concisely explain the key ideas, definitions, and/or example(s) covered in that subsection.
+- Do not use bullet points in summaries. Do not mention that you are an AI. Do not refer to "the video"; summarize the content directly.
 - All timestamps must be in "HH:MM:SS" (hours:minutes:seconds, zero-padded) and represent the starting point of the subsection in the video.
 - Each section MUST have between 3 and 5 subsections. NEVER output more than 5 subsections in a section.
 - If a section would naturally have more than 5 topics, MERGE adjacent small/related topics into broader subsections so it stays within the 5-subsection limit.
@@ -142,7 +132,7 @@ export async function POST(req: NextRequest) {
     if (!youtubeUrl || typeof youtubeUrl !== "string") {
       return NextResponse.json(
         { error: "Missing youtubeUrl" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -180,14 +170,14 @@ export async function POST(req: NextRequest) {
     } catch (jsonErr) {
       return NextResponse.json(
         { error: "Gemini response was not valid JSON", details: llmResponse },
-        { status: 422 }
+        { status: 422 },
       );
     }
 
     if (!payload || typeof payload !== "object") {
       return NextResponse.json(
         { error: "Gemini response was not a JSON object", details: payload },
-        { status: 422 }
+        { status: 422 },
       );
     }
 
@@ -201,7 +191,7 @@ export async function POST(req: NextRequest) {
           error: "LLM response did not match expected lecture navigator schema",
           details: blueprint,
         },
-        { status: 422 }
+        { status: 422 },
       );
     }
 
@@ -211,7 +201,7 @@ export async function POST(req: NextRequest) {
           error: "LLM response did not match expected flashcards schema",
           details: flashcards,
         },
-        { status: 422 }
+        { status: 422 },
       );
     }
 
@@ -221,7 +211,7 @@ export async function POST(req: NextRequest) {
     console.error("[process-video]", err);
     return NextResponse.json(
       { error: "Internal Server Error", details: err?.message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

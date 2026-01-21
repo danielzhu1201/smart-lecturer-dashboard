@@ -1,17 +1,80 @@
 import { convertToModelMessages, streamText, UIMessage } from "ai";
 import { google } from "@ai-sdk/google";
+import type { Blueprint } from "@/types/lecture-navigator";
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
 
+function approxTokens(text: string) {
+  // Very rough heuristic widely used for English text.
+  // Good enough for logging/debugging, not billing-accurate.
+  return Math.ceil(text.length / 4);
+}
+
+function stringifyForLog(value: unknown, maxChars = 20_000) {
+  const str =
+    typeof value === "string" ? value : JSON.stringify(value, null, 2);
+  return str.length > maxChars
+    ? str.slice(0, maxChars) + "\n…(truncated)"
+    : str;
+}
+
+function blueprintToSystemMessage(blueprint: Blueprint): string {
+  const outline = blueprint.sections
+    .map((section) => {
+      const subs = section.subsections
+        .map((sub) => `- [${sub.timestamp}] ${sub.title}: ${sub.summary}`)
+        .join("\n");
+      return `Section: ${section.title}\n${subs}`;
+    })
+    .join("\n\n");
+
+  return [
+    "You are a knowledgeable professor.",
+    "Answer questions about the current lecture using ONLY the lecture blueprint below.",
+    "If the blueprint does not contain enough information, say so and ask a clarifying question.",
+    "\nLecture Blueprint:\n" + outline,
+  ].join("\n");
+}
+
 export async function POST(req: Request) {
-  const { messages }: { messages: UIMessage[] } = await req.json();
+  const {
+    messages,
+    blueprint,
+  }: { messages: UIMessage[]; blueprint: Blueprint } = await req.json();
+
+  const system = blueprintToSystemMessage(blueprint);
+  const modelMessages = await convertToModelMessages(messages);
+
+  // Debug logging for exactly what we send to the LLM + approximate token counts.
+  if (process.env.NODE_ENV !== "production") {
+    const systemTokens = approxTokens(system);
+    const perMessage = modelMessages.map((m: any, idx: number) => {
+      const content =
+        typeof m.content === "string" ? m.content : JSON.stringify(m.content);
+
+      return {
+        index: idx,
+        role: m.role,
+        approxTokens: approxTokens(content),
+      };
+    });
+    const totalTokens =
+      systemTokens + perMessage.reduce((sum, m) => sum + m.approxTokens, 0);
+
+    console.log("[chat] LLM payload.system:\n" + stringifyForLog(system));
+    console.log(
+      "[chat] LLM payload.messages:\n" + stringifyForLog(modelMessages),
+    );
+    console.log("[chat] approxTokens.system:", systemTokens);
+    console.log("[chat] approxTokens.perMessage:", perMessage);
+    console.log("[chat] approxTokens.total:", totalTokens);
+  }
 
   const result = streamText({
     model: google("gemini-2.5-flash"),
-    system:
-      "You are a knowledgeable professor. Help answer all questions regarding the current video lecture as clearly and accurately as possible.",
-    messages: await convertToModelMessages(messages),
+    system,
+    messages: modelMessages,
   });
 
   return result.toUIMessageStreamResponse();

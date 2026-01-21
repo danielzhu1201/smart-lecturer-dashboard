@@ -2,26 +2,41 @@
 
 import type React from "react";
 import { useChat } from "@ai-sdk/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MessageSquare, Send } from "lucide-react";
+import type { Blueprint } from "@/types/lecture-navigator";
 
 interface ProfessorChatProps {
   onSeek?: (seconds: number) => void;
+  blueprint?: Blueprint;
 }
 
-export function ProfessorChat({ onSeek }: ProfessorChatProps) {
+export function ProfessorChat({ onSeek, blueprint }: ProfessorChatProps) {
   const [input, setInput] = useState("");
   const { messages, sendMessage } = useChat();
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  // Keep the latest message visible as the conversation grows.
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages.length]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
 
     try {
-      await sendMessage({ text: input });
+      await sendMessage(
+        { text: input },
+        {
+          body: {
+            blueprint,
+          },
+        },
+      );
       setInput("");
     } catch (error) {
       console.error("Failed to send message:", error);
@@ -38,8 +53,8 @@ export function ProfessorChat({ onSeek }: ProfessorChatProps) {
           Professor Chat
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col gap-4">
-        <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+      <CardContent className="flex-1 min-h-0 flex flex-col gap-4">
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden space-y-4 pr-2">
           {messages.length === 0 && (
             <div className="text-sm text-muted-foreground text-center py-8">
               Ask questions about the lecture content...
@@ -72,6 +87,7 @@ export function ProfessorChat({ onSeek }: ProfessorChatProps) {
               </div>
             );
           })}
+          <div ref={bottomRef} />
         </div>
 
         <form onSubmit={handleSubmit} className="flex gap-2">

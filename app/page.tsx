@@ -70,6 +70,7 @@ export default function Home() {
         {appState === "active" && blueprint && (
           <DashboardView
             youtubeUrl={youtubeUrl}
+            blueprint={blueprint}
             sections={blueprint.sections}
             flashcards={flashcards}
           />

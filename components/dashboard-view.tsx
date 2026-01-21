@@ -6,16 +6,22 @@ import { LectureNavigator } from "@/components/lecture-navigator";
 import { ProfessorChat } from "@/components/professor-chat";
 import { StudyTools } from "@/components/study-tools";
 import { createKnowledgeMapGraph } from "@/lib/utils";
-import { BlueprintSection, Flashcard } from "@/types/lecture-navigator";
+import {
+  Blueprint,
+  BlueprintSection,
+  Flashcard,
+} from "@/types/lecture-navigator";
 
 interface DashboardViewProps {
   youtubeUrl: string;
+  blueprint?: Blueprint;
   sections?: BlueprintSection[]; // new prop
   flashcards?: Flashcard[] | null;
 }
 
 export function DashboardView({
   youtubeUrl,
+  blueprint,
   sections,
   flashcards,
 }: DashboardViewProps) {
@@ -63,7 +69,7 @@ export function DashboardView({
         {/* Right Sidebar - Navigator, Knowledge Map, and Chat */}
         <div className="lg:col-span-1 space-y-6">
           <LectureNavigator onSeek={handleSeek} sections={sections} />
-          <ProfessorChat onSeek={handleSeek} />
+          <ProfessorChat onSeek={handleSeek} blueprint={blueprint} />
         </div>
       </div>
     </div>
